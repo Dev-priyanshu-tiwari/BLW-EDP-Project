@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { PoRecord, Co6Record } from "./types";
 import OverviewTab from "./components/OverviewTab";
 import railwayLogo from "./assets/images/railway_logo_1781671627603.jpeg";
@@ -29,6 +29,32 @@ export default function App() {
 
   // Controls whether the desktop sidebar is expanded (open) or collapsed (closed)
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
+
+  // Tracks whether the mobile header should be visible (hides on scroll-down, shows on scroll-up)
+  const [headerVisible, setHeaderVisible] = useState<boolean>(true);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const lastScrollYRef = useRef<number>(0);
+
+  const handleContentScroll = () => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    const currentScrollY = el.scrollTop;
+    const lastScrollY = lastScrollYRef.current;
+    const SCROLL_THRESHOLD = 8; // ignore tiny jitter scrolls
+
+    if (Math.abs(currentScrollY - lastScrollY) < SCROLL_THRESHOLD) return;
+
+    if (currentScrollY > lastScrollY && currentScrollY > 40) {
+      // Scrolling down past a small offset -> hide header
+      setHeaderVisible(false);
+    } else {
+      // Scrolling up, or near the very top -> show header
+      setHeaderVisible(true);
+    }
+
+    lastScrollYRef.current = currentScrollY;
+  };
 
   // Auto-collapse the sidebar on smaller screens (tablets / narrow laptop windows),
   // and auto-expand it again once the viewport is wide enough. The 1024px breakpoint
@@ -309,7 +335,11 @@ export default function App() {
       <main className="flex-1 flex flex-col overflow-hidden">
         
         {/* Desktop Head Row */}
-        <header className="h-20 bg-white border-b border-gray-200 flex items-center justify-between px-6 md:px-10 shrink-0">
+        <header
+          className={`h-20 bg-white border-b border-gray-200 flex items-center justify-between px-6 md:px-10 shrink-0 transition-transform duration-300 ease-in-out z-20 ${
+            headerVisible ? "translate-y-0" : "-translate-y-full md:translate-y-0"
+          }`}
+        >
           <div className="flex items-center gap-3 md:gap-4">
             <button
               onClick={() => setSidebarOpen(o => !o)}
@@ -350,7 +380,11 @@ export default function App() {
         </header>
 
         {/* 4. Main Scrollable Container */}
-        <div className="flex-1 p-4 md:p-8 space-y-6 overflow-y-auto">
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleContentScroll}
+          className="flex-1 p-4 md:p-8 space-y-6 overflow-y-auto"
+        >
           {loading ? (
             <div className="min-h-96 flex flex-col items-center justify-center space-y-4">
               <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
